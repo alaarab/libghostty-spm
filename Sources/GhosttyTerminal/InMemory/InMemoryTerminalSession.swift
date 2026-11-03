@@ -150,6 +150,49 @@ public final class InMemoryTerminalSession: @unchecked Sendable {
         } ?? nil
     }
 
+    /// Returns one viewport row as a UTF-8 string, or `nil` if no surface is
+    /// attached. This is the same single-row read `readViewportText()` performs
+    /// for each of its lines, without reading the rows a caller will not look
+    /// at. An out-of-range row is an empty string.
+    ///
+    /// Thread-safe: keeps the surface alive for the duration of the read,
+    /// preventing access against a surface mid-replacement.
+    public func readViewportRow(_ row: Int) -> String? {
+        surfaceAccess.withCurrentSurface { surface -> String? in
+            let size = ghostty_surface_size(surface)
+            guard size.columns > 0 else { return "" }
+            guard row >= 0, UInt32(row) < UInt32(size.rows) else { return "" }
+            let selection = ghostty_selection_s(
+                top_left: ghostty_point_s(
+                    tag: GHOSTTY_POINT_VIEWPORT,
+                    coord: GHOSTTY_POINT_COORD_EXACT,
+                    x: 0,
+                    y: UInt32(row),
+                ),
+                bottom_right: ghostty_point_s(
+                    tag: GHOSTTY_POINT_VIEWPORT,
+                    coord: GHOSTTY_POINT_COORD_EXACT,
+                    x: UInt32(size.columns) - 1,
+                    y: UInt32(row),
+                ),
+                rectangle: false,
+            )
+
+            var out = ghostty_text_s()
+            guard ghostty_surface_read_text(surface, selection, &out) else {
+                return nil
+            }
+            defer { ghostty_surface_free_text(surface, &out) }
+
+            guard let textPtr = out.text, out.text_len > 0 else {
+                return ""
+            }
+            let bytes = UnsafeBufferPointer(start: textPtr, count: Int(out.text_len))
+                .map { UInt8(bitPattern: $0) }
+            return String(decoding: bytes, as: UTF8.self)
+        } ?? nil
+    }
+
     func updateViewport(_ size: TerminalGridMetrics) {
         TerminalDebugLog.log(.metrics, "in-memory viewport update \(size.debugSummary)")
         dispatchResize(InMemoryTerminalViewport(
