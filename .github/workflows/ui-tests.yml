@@ -46,7 +46,7 @@ jobs:
         with:
           name: libghostty-ui-${{ matrix.slug }}-xcresult
           path: ${{ runner.temp }}/libghostty-ui-${{ matrix.slug }}-*.xcresult
-          retention-days: 7
+          retention-days: 1
 
   mac-catalyst:
     name: Mac Catalyst UI Tests
@@ -81,7 +81,7 @@ jobs:
         with:
           name: libghostty-ui-maccatalyst-xcresult
           path: ${{ runner.temp }}/libghostty-ui-maccatalyst.xcresult
-          retention-days: 7
+          retention-days: 1
 
   macos-appkit:
     name: macOS AppKit UI Tests
@@ -115,4 +115,4 @@ jobs:
         with:
           name: libghostty-ui-macos-xcresult
           path: ${{ runner.temp }}/libghostty-ui-macos.xcresult
-          retention-days: 7
+          retention-days: 1
